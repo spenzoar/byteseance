@@ -1,0 +1,250 @@
+<!-- Spencer Smith 2013 -->
+
+<!DOCTYPE html>
+
+<html>
+<meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+<style type="text/CSS">
+	body{
+		font-family:"Courier New", Courier, Monospace;
+	}
+</style>
+
+<body>
+	<div id="text">
+		<!-- javascript will add here-->
+	</div>
+	<div id="info"></div>
+
+	<form type="get" action="/">
+		<input type="submit" name="home" value="Home"/>
+	</form>
+
+<script type="text/javascript">
+
+//the snake object
+var Snake = {
+	move : "up",
+	size : 0,
+	x    : new Array(),
+	y    : new Array()
+};
+
+//the everything object
+var grid = {
+	height    : 20,
+	width     : 50,
+	emptyLine : "",
+	xfood     : 0,
+	yfood     : 0,
+	deaths    : 0,
+	lines     : new Array(),
+	snake     : Snake
+};
+
+//short cut, saves typing
+var $ = function(id){
+	return document.getElementById(id);
+}//$()
+
+//makes a snake of a given length
+function makeSnake(newsize){
+	grid.snake.size = newsize;
+	if(newsize == 0) return;
+	var x = grid.snake.x;
+	var y = grid.snake.y;
+	x[0] = 25;
+	y[0] = 5;
+	for(var i = 1; i < newsize; i++){
+		x[i] = 25;
+		y[i] = 6;
+	}//for
+}//makeSnake()
+
+//makes the snake one part larger
+function grow(){
+	var snake = grid.snake;
+	snake.x[snake.size] = snake.x[snake.size - 1];
+	if(snake.size == 1) snake.y[1] = snake.y[0] + 1;
+	else snake.y[snake.size] = snake.y[snake.size - 1];
+	snake.size++;
+}//grow()
+
+//determines whether head has hit it's body
+function collision(){
+	var xhead = grid.snake.x[0];
+	var yhead = grid.snake.y[0];
+	//iterate through snake body
+	var xbody;
+	var ybody;
+	for(var i = 1; i < grid.snake.size; i++){
+		xbody = grid.snake.x[i];
+		ybody = grid.snake.y[i];
+		if(xhead == xbody && yhead == ybody){
+			return true;//found a collision
+		}//if
+	}//for
+	return false;//didn't hit anything
+}//collision()
+
+//places a new food in a random location
+function makeFood(){
+	var newx = Math.floor(Math.random() * grid.width);
+	var newy = Math.floor(Math.random() * grid.height);
+	grid.xfood = newx;
+	grid.yfood = newy;
+}//makeFood()
+
+//makes the starting grid and adds modifies DOM
+function makeGrid(){
+	//initialize the grid to be blank
+	var str = new Array();
+	for(var j = 0; j < grid.width; j++) str[j] = '-';
+	grid.emptyLine = str;
+	for(var i = 0; i < grid.height; i++) grid.lines[i] = str.slice(0);
+	
+	//create the DOM nodes for grid.lines
+	for(var i = 0; i < grid.height; i++){
+		var iDiv = document.createElement("div");
+		iDiv.id = i;
+		var line = document.createTextNode("null");
+		iDiv.appendChild(line);
+		$("text").appendChild(iDiv);
+	}//for
+	
+	//initialize the snake
+	var snake = grid.snake;
+	snake.move = "up";
+	makeSnake(2);
+	
+	makeFood();
+	updateGrid();
+	updateDOM();
+}//makeGrid()
+
+//updates the DOM with the text inside grid
+function updateDOM(){
+	//updates the lines
+	for(var i = 0; i < grid.height; i++){
+		var lineStr = "";
+		for(var j = 0; j < grid.width; j++){
+			lineStr += grid.lines[i][j];
+		}//for
+		//alert("lineStr: " + lineStr);
+		$(i).childNodes[0].data = lineStr;
+	}//for
+	
+	//updates the stats
+	var str = "Size: " + grid.snake.size;
+	str += " Deaths: " + grid.deaths;
+	$("info").innerHTML = str;
+}//update()
+
+//changes the grid text to reflect snake position
+function updateGrid(){
+	var lines = grid.lines;
+	
+	//iterate through snake parts changing their lines
+	for(var i = 0; i < grid.snake.size; i ++){
+		var x = grid.snake.x[i];
+		var y = grid.snake.y[i];
+		//alert("(" + x + ", " + y + ") = " + lines[y][x]);
+		lines[y][x] = 'S';
+	}//for
+	
+	//add the food to it's line
+	lines[grid.yfood][grid.xfood] = 'F';
+}//updateGrid()
+
+//moves snake by changing it's arrays(x/y)
+function clock(){
+	var snake = grid.snake;
+
+	//clears the last piece of the snake from the grid text
+	//before it gets moved and it's position is lost
+	var x = snake.x[snake.size - 1];
+	var y = snake.y[snake.size - 1];
+	grid.lines[y][x] = '-';
+
+	//move everything but the head
+	for(var i = snake.size - 1; i > 0; i--){
+		snake.x[i] = snake.x[i - 1];
+		snake.y[i] = snake.y[i - 1];
+	}//for
+
+	//move head based on direction
+	if(snake.move == "up"){
+		snake.y[0]-= 1;
+		if(snake.y[0] < 0){
+			snake.y[0] = grid.height - 1;
+		}//if
+	}//if up
+	else if(snake.move == "down"){
+		snake.y[0] += 1;
+		if(snake.y[0] >= grid.height){
+			snake.y[0] = 0;
+		}//if
+	}//else if
+	else if(snake.move == "right"){
+		snake.x[0] += 1;
+		if(snake.x[0] >= grid.width){
+			snake.x[0] = 0;
+		}//if
+	}//else if
+	else if(snake.move == "left"){
+		snake.x[0] -= 1;
+		if(snake.x[0] < 0){
+			snake.x[0] = grid.width - 1;
+		}//if
+	}//else if
+	else alert("error inside clock()");
+	
+	//check to see if the snakeHead == onFood
+	if(snake.x[0] == grid.xfood && snake.y[0] == grid.yfood){
+		grow();
+		makeFood();
+	}//if
+	
+	//check to see if snakeHead has a collision
+	if(collision()){
+		var ans = confirm("you lose, continue anyway?");
+		if(ans == false) window.clearInterval(myInterval);
+		else grid.deaths++;
+	}//if
+	
+	updateGrid();//updates grid text to reflect x/y coords
+	updateDOM();//updates DOM to reflect the grid
+}//clock()
+
+//the key event handler, changes direction snake is moving
+function keyEvent(event){
+	var snake = grid.snake;
+	switch(event.keyCode){
+		case 37:
+			if(snake.move != "right") snake.move = "left";
+			break;
+		case 38:
+			if(snake.move != "down") snake.move = "up";
+			break;
+		case 39:
+			if(snake.move != "left") snake.move = "right";
+			break;
+		case 40:
+			if(snake.move != "up") snake.move = "down";
+			break;
+		default: alert("please press arrow keys");
+	}//switch
+}//keyEvent()
+
+//assign things when the page is loaded
+window.onload = function(){
+	document.onkeydown = keyEvent;
+	makeGrid();
+}//onload()
+
+//sets the clock tick interval
+var myInterval = window.setInterval(function(){clock()}, 100);
+
+</script>
+</body>
+</html>
